@@ -187,7 +187,10 @@ public class WebPanel {
         String header = exchange.getRequestHeaders().getFirst("Authorization");
         if (header == null || !header.startsWith("Bearer ")) return false;
         byte[] given = header.substring(7).trim().getBytes(StandardCharsets.UTF_8);
-        byte[] expected = config.webPanelPassword.getBytes(StandardCharsets.UTF_8);
+        String password = config.webPanelPassword;
+        // never accept an empty password, even if the config was left in that state
+        if (password == null || password.isBlank()) return false;
+        byte[] expected = password.getBytes(StandardCharsets.UTF_8);
         return MessageDigest.isEqual(given, expected);
     }
 

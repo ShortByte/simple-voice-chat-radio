@@ -51,6 +51,12 @@ dependencies {
 		transitive = false
 	}
 
+	// Optional: config screen in Mod Menu, built with Cloth Config. Both are also loaded in the dev client.
+	["maven.modrinth:modmenu:${project.modmenu_version}", "maven.modrinth:cloth-config:${project.cloth_config_version}"].each { dep ->
+		add(mod('compileOnly'), dep) { transitive = false }
+		add(mod('localRuntime'), dep) { transitive = false }
+	}
+
 	// Fabric's test launcher resolves mod dependencies, so Simple Voice Chat must be present for tests
 	add(mod('testRuntimeOnly'), "maven.modrinth:simple-voice-chat:${project.voicechat_mod_version}") {
 		transitive = false

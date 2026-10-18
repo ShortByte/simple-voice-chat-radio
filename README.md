@@ -34,6 +34,9 @@ On the bot's client:
 - **[Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat)** 2.6 or newer (Fabric)
 - **Java** 21 (Minecraft 1.21.x) or 25 (Minecraft 26.x) – the Minecraft launcher already includes the right one
 
+Optional, for an in-game config screen: **[Mod Menu](https://modrinth.com/mod/modmenu)** and
+**[Cloth Config](https://modrinth.com/mod/cloth-config)**.
+
 On the server: **Simple Voice Chat**, as usual.
 
 ### Supported Minecraft versions
@@ -208,7 +211,12 @@ When someone requests a link with `!play` that is already in the library, the bo
 
 ## Configuration
 
-All options are in `config/musicbot.json`. Use `/musicbot reload` (or `!reload` as owner) after editing it.
+With **Mod Menu** and **Cloth Config** installed, every option can be changed in game: open *Mods*, select
+*Voice Chat Music Bot* and click the config button. Changes apply as soon as you save, except options marked with
+"requires restart".
+
+All options are stored in `config/musicbot.json`. If you edit the file by hand, run `/musicbot reload`
+(or `!reload` as owner) afterwards.
 
 | Option | Default | Description |
 |---|---|---|

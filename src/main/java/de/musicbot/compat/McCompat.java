@@ -5,6 +5,8 @@ import com.mojang.brigadier.arguments.ArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
@@ -71,6 +73,13 @@ public final class McCompat {
         HoverEvent.EntityTooltipInfo info = hover == null ? null : hover.getValue(HoverEvent.Action.SHOW_ENTITY);
         return info == null ? null : info.id;
         *///?}
+    }
+
+    public static void setScreen(Screen screen) {
+        //? if >=26.2 {
+        Minecraft.getInstance().gui.setScreen(screen);
+        //?} else
+        //Minecraft.getInstance().setScreen(screen);
     }
 
     public static LiteralArgumentBuilder<FabricClientCommandSource> literal(String name) {

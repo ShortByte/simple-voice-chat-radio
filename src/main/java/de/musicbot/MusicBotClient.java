@@ -155,6 +155,8 @@ public class MusicBotClient implements ClientModInitializer {
         config.headBob = fresh.headBob;
         config.headBobStrength = fresh.headBobStrength;
         config.headBobSway = fresh.headBobSway;
+        // the password applies immediately; webPanel, webPanelBind and webPanelPort need a restart
+        config.webPanelPassword = fresh.webPanelPassword;
         player.setVolume(config.volume);
         compilePatterns();
     }
