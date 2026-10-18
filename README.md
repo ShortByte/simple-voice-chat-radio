@@ -330,6 +330,13 @@ builds all versions and collects the jars in `build/libs/`. To build a single ve
   (copy an existing one and update the Fabric API and Simple Voice Chat versions). Since 26.1, Minecraft is no longer
   obfuscated; `build.gradle` picks the matching Loom plugin automatically.
 
+### Releasing
+
+1. Set `version` in `gradle.properties` and add a matching `## <version>` section to `CHANGELOG.md`.
+2. Commit, then tag and push: `git tag v1.0.0` and `git push origin v1.0.0`.
+3. GitHub Actions builds and tests every Minecraft version and creates a **draft release** with all jars.
+   Review it on GitHub and click *Publish release*.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on [GitHub](https://github.com/ShortByte/simple-voice-chat-radio).
