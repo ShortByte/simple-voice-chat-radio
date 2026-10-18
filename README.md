@@ -95,8 +95,7 @@ A yt-dlp downloaded by the mod updates itself on every start (`yt-dlp -U`), beca
 4. **Play something.** In chat, type `!play never gonna give you up`, or send it privately: `/msg BotName play <link>`.
 5. **Optional: invite the bot into your voice chat group** with `/voicechat invite BotName`. It joins automatically,
    and the whole group hears the music regardless of distance.
-6. **Optional: open the web panel.** The bot posts its address in chat when it joins a server. Get the password
-   with `/musicbot web` on the bot (see [Web panel](#web-panel)).
+6. **Optional: enable the web panel** (see [Web panel](#web-panel)). It is off by default.
 
 To let friends control the music as well: `/msg BotName member add FriendName`.
 
@@ -171,9 +170,11 @@ bot's client.
 
 ## Web panel
 
-The bot starts a small web panel (default port **8095**) that is reachable from every device in your home network,
+The bot can start a small web panel (default port **8095**) that is reachable from every device in your home network,
 e.g. `http://192.168.1.50:8095`. The bot shows the exact address in chat when it joins a server, and with `/musicbot web`.
 
+- **Enable it:** the panel is **off by default**, because it gives owner rights to anyone with the password.
+  Set `webPanel` to `true` in the config screen or in `config/musicbot.json`, then restart the game.
 - **Password:** generated randomly on first start and stored in `config/musicbot.json` (`webPanelPassword`).
   `/musicbot web` on the bot shows it. It is never sent through chat.
 - **Features:** now playing with a progress bar (click to seek), pause / skip / stop / shuffle / repeat / head bob,
@@ -182,7 +183,7 @@ e.g. `http://192.168.1.50:8095`. The bot shows the exact address in chat when it
 - The panel has **owner rights**. Only share the password with people you would make an owner.
 - **Windows firewall:** on first start, Windows asks whether Java may communicate on networks. Allow
   *private networks*. If the prompt did not appear, allow incoming TCP connections on port 8095.
-- To make it reachable only on the bot's PC, set `webPanelBind` to `127.0.0.1`. To turn it off, set `webPanel` to `false`.
+- To make it reachable only on the bot's PC, set `webPanelBind` to `127.0.0.1`. To turn it off again, set `webPanel` to `false`.
 - The connection is plain, unencrypted HTTP. It is meant for your home network. **Do not** expose it to the
   internet through port forwarding.
 
@@ -242,7 +243,7 @@ All options are stored in `config/musicbot.json`. If you edit the file by hand, 
 | `membersCanDownload` | `true` | Members may download into the library (otherwise owners only) |
 | `maxDownloadMinutes` | `120` | Maximum track length for downloads (0 = unlimited) |
 | `useLibraryCache` | `true` | Play links that are already saved from the library instead of streaming them |
-| `webPanel` | `true` | Start the web panel (restart required) |
+| `webPanel` | `false` | Start the web panel (restart required) |
 | `webPanelBind` / `webPanelPort` | `0.0.0.0` / `8095` | Address and port of the panel (`127.0.0.1` = this PC only) |
 | `webPanelPassword` | random | Password for the panel |
 | `headBob` | `true` | Nod to the beat (beat detection in the bass) |

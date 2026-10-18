@@ -70,7 +70,7 @@
 	"config.musicbot.autoJoinInvites.tooltip": "Automatically join voice chat groups when an owner or member invites the bot.",
 
 	"config.musicbot.webPanel": "Enable web panel",
-	"config.musicbot.webPanel.tooltip": "Control the bot from a browser. The panel has owner rights.",
+	"config.musicbot.webPanel.tooltip": "Control the bot from a browser. The panel has owner rights, so it is off by default.",
 	"config.musicbot.webPanelBind": "Address",
 	"config.musicbot.webPanelBind.tooltip": "0.0.0.0 = reachable in your local network, 127.0.0.1 = only this PC. Never expose the panel to the internet.",
 	"config.musicbot.webPanelPort": "Port",

@@ -118,8 +118,8 @@ public class BotConfig {
     /** Play a song from the library instead of streaming it again when the same link is requested. */
     public boolean useLibraryCache = true;
 
-    /** Built-in web panel to control the bot from a browser (acts with owner rights). */
-    public boolean webPanel = true;
+    /** Built-in web panel to control the bot from a browser (acts with owner rights). Off by default for safety. */
+    public boolean webPanel = false;
 
     /** Address the web panel listens on. "0.0.0.0" = reachable in the local network, "127.0.0.1" = only this PC. */
     public String webPanelBind = "0.0.0.0";
