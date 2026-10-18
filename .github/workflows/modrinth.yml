@@ -1,0 +1,40 @@
+# Uploads every Minecraft version to Modrinth when a GitHub release is published
+# (i.e. after clicking "Publish release" on the draft created by release.yml).
+# Needs the repository secret MODRINTH_TOKEN and modrinth_id in gradle.properties.
+name: Publish to Modrinth
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+
+jobs:
+  modrinth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Modrinth setup
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: |
+          if [ -z "$MODRINTH_TOKEN" ]; then
+            echo "The repository secret MODRINTH_TOKEN is missing"
+            exit 1
+          fi
+          if grep -q '^modrinth_id=TODO' gradle.properties; then
+            echo "Set modrinth_id in gradle.properties"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Upload all Minecraft versions to Modrinth
+        env:
+          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+        run: ./gradlew publishAll

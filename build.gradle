@@ -4,6 +4,7 @@
 // Since 26.1 the game is no longer obfuscated: no mappings, no remapping, no mod* configurations
 def unobfuscated = stonecutter.eval(stonecutter.current.version, '>=26.1')
 apply plugin: unobfuscated ? 'net.fabricmc.fabric-loom' : 'net.fabricmc.fabric-loom-remap'
+apply plugin: 'me.modmuss50.mod-publish-plugin'
 
 /** Name of the configuration for mod dependencies, e.g. implementation -> modImplementation on obfuscated versions. */
 def mod = { String configuration -> unobfuscated ? configuration : 'mod' + configuration.capitalize() }
@@ -106,4 +107,36 @@ tasks.register('collectJar', Copy) {
 	def modJar = tasks.named(unobfuscated ? 'jar' : 'remapJar')
 	from modJar.flatMap { it.archiveFile }
 	into rootProject.layout.buildDirectory.dir('libs')
+}
+
+/** The section "## <version>" of CHANGELOG.md, used as release notes on Modrinth. */
+def changelogSection = { String modVersion ->
+	def lines = rootProject.file('CHANGELOG.md').readLines('UTF-8')
+	int start = lines.indexOf("## ${modVersion}".toString())
+	if (start < 0) return "See CHANGELOG.md"
+	def section = lines.drop(start + 1).takeWhile { !it.startsWith('## ') }
+	return section.join('\n').trim()
+}
+
+// Uploads this version's jar to Modrinth. Without MODRINTH_TOKEN it only does a dry run.
+publishMods {
+	def modVersion = rootProject.property('version') as String
+	file = tasks.named(unobfuscated ? 'jar' : 'remapJar').flatMap { it.archiveFile }
+	displayName = "${modVersion} for Minecraft ${project.modrinth_game_versions.split(',')[-1].trim()}"
+	version = project.version as String
+	changelog = changelogSection(modVersion)
+	type = STABLE
+	modLoaders.add('fabric')
+	dryRun = !providers.environmentVariable('MODRINTH_TOKEN').isPresent()
+
+	modrinth {
+		accessToken = providers.environmentVariable('MODRINTH_TOKEN')
+		projectId = rootProject.property('modrinth_id') as String
+		minecraftVersionList(project.modrinth_game_versions as String)
+		environment = CLIENT_ONLY
+		requires('fabric-api')
+		requires('simple-voice-chat')
+		optional('modmenu')
+		optional('cloth-config')
+	}
 }

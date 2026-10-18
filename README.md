@@ -336,6 +336,10 @@ builds all versions and collects the jars in `build/libs/`. To build a single ve
 2. Commit, then tag and push: `git tag v1.0.0` and `git push origin v1.0.0`.
 3. GitHub Actions builds and tests every Minecraft version and creates a **draft release** with all jars.
    Review it on GitHub and click *Publish release*.
+4. Publishing the release uploads every version to Modrinth automatically. This needs the repository secret
+   `MODRINTH_TOKEN` (a Modrinth personal access token with the scopes *Create versions*, *Read versions* and
+   *Write versions*) and the project ID in `modrinth_id` in `gradle.properties`.
+   `gradlew publishAll` without a token only does a dry run and prints what would be uploaded.
 
 ## Contributing
 

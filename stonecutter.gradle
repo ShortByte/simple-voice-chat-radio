@@ -2,6 +2,7 @@ plugins {
 	id 'dev.kikugie.stonecutter'
 	// Both Loom variants live in the same artifact; build.gradle applies the right one per version
 	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+	id 'me.modmuss50.mod-publish-plugin' version '2.2.1' apply false
 }
 
 // The version the shared src/ is currently written for (switch with the "Set active project to ..." tasks)
@@ -11,4 +12,15 @@ tasks.register('buildAll') {
 	group = 'build'
 	description = 'Builds the mod for every supported Minecraft version and collects the jars in build/libs/'
 	dependsOn stonecutter.tasks.named('collectJar') { true }
+}
+
+tasks.register('publishAll') {
+	group = 'publishing'
+	description = 'Uploads the jar of every Minecraft version to Modrinth (dry run without MODRINTH_TOKEN)'
+	dependsOn stonecutter.tasks.named('publishMods') { true }
+}
+
+// Upload in version order, so Modrinth lists the newest Minecraft version first
+stonecutter.tasks {
+	order 'publishModrinth'
 }
