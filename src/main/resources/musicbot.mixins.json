@@ -1,0 +1,11 @@
+{
+	"required": true,
+	"package": "de.musicbot.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": [
+		"MicrophoneManagerMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

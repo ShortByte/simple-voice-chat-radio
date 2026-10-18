@@ -1,0 +1,14 @@
+plugins {
+	id 'dev.kikugie.stonecutter'
+	// Both Loom variants live in the same artifact; build.gradle applies the right one per version
+	id 'net.fabricmc.fabric-loom' version "${loom_version}" apply false
+}
+
+// The version the shared src/ is currently written for (switch with the "Set active project to ..." tasks)
+stonecutter.active '26.3'
+
+tasks.register('buildAll') {
+	group = 'build'
+	description = 'Builds the mod for every supported Minecraft version and collects the jars in build/libs/'
+	dependsOn stonecutter.tasks.named('collectJar') { true }
+}

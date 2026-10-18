@@ -1,0 +1,35 @@
+{
+	"schemaVersion": 1,
+	"id": "musicbot",
+	"version": "${version}",
+	"name": "Voice Chat Music Bot",
+	"description": "Turns a client into a music bot that streams YouTube, SoundCloud & more through Simple Voice Chat. Controlled via chat commands from configured owner accounts.",
+	"authors": [
+		"ShortByte"
+	],
+	"contact": {
+		"sources": "https://github.com/ShortByte/simple-voice-chat-radio",
+		"issues": "https://github.com/ShortByte/simple-voice-chat-radio/issues"
+	},
+	"license": "MIT",
+	"icon": "assets/musicbot/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"de.musicbot.MusicBotClient"
+		],
+		"voicechat": [
+			"de.musicbot.voice.MusicBotVoicechatPlugin"
+		]
+	},
+	"mixins": [
+		"musicbot.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "${minecraft_dependency}",
+		"java": ">=${java_version}",
+		"fabric-api": "*",
+		"voicechat": "${voicechat_dependency}"
+	}
+}

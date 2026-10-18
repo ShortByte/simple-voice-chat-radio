@@ -1,0 +1,98 @@
+// Shared build script, evaluated once per Minecraft version in versions/<version>/
+// (versions are declared in settings.gradle, their dependencies in versions/<version>/gradle.properties)
+
+// Since 26.1 the game is no longer obfuscated: no mappings, no remapping, no mod* configurations
+def unobfuscated = stonecutter.eval(stonecutter.current.version, '>=26.1')
+apply plugin: unobfuscated ? 'net.fabricmc.fabric-loom' : 'net.fabricmc.fabric-loom-remap'
+
+/** Name of the configuration for mod dependencies, e.g. implementation -> modImplementation on obfuscated versions. */
+def mod = { String configuration -> unobfuscated ? configuration : 'mod' + configuration.capitalize() }
+if (!unobfuscated) {
+	// Remap Loom only creates mod* configurations for the main source set by default
+	loom.createRemapConfigurations(sourceSets.test)
+}
+
+def minecraftVersion = stonecutter.current.version
+def javaVersion = (project.java_version as String).toInteger()
+
+version = "${project.version}+${minecraftVersion}"
+base.archivesName = rootProject.name
+
+repositories {
+	maven {
+		name = 'henkelmax'
+		url = 'https://maven.maxhenkel.de/repository/public'
+	}
+	exclusiveContent {
+		forRepository {
+			maven {
+				name = 'Modrinth'
+				url = 'https://api.modrinth.com/maven'
+			}
+		}
+		filter {
+			includeGroup 'maven.modrinth'
+		}
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${minecraftVersion}"
+	if (!unobfuscated) {
+		mappings loom.officialMojangMappings()
+	}
+	add(mod('implementation'), "net.fabricmc:fabric-loader:${project.loader_version}")
+	add(mod('implementation'), "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}")
+
+	// Simple Voice Chat API - provided at runtime by the Simple Voice Chat mod
+	compileOnly "de.maxhenkel.voicechat:voicechat-api:${project.voicechat_api_version}"
+	// Full mod, only needed to compile the virtual microphone mixin against its internals
+	add(mod('compileOnly'), "maven.modrinth:simple-voice-chat:${project.voicechat_mod_version}") {
+		transitive = false
+	}
+
+	// Fabric's test launcher resolves mod dependencies, so Simple Voice Chat must be present for tests
+	add(mod('testRuntimeOnly'), "maven.modrinth:simple-voice-chat:${project.voicechat_mod_version}") {
+		transitive = false
+	}
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+	testImplementation platform("org.junit:junit-bom:5.13.4")
+	testImplementation "org.junit.jupiter:junit-jupiter"
+	testRuntimeOnly "org.junit.platform:junit-platform-launcher"
+}
+
+test {
+	useJUnitPlatform()
+}
+
+processResources {
+	def props = [
+			version             : project.version,
+			minecraft_dependency: project.minecraft_dependency,
+			voicechat_dependency: project.voicechat_dependency,
+			java_version        : javaVersion
+	]
+	inputs.properties props
+
+	filesMatching("fabric.mod.json") {
+		expand props
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = javaVersion
+	it.options.encoding = 'UTF-8'
+}
+
+java {
+	sourceCompatibility = JavaVersion.toVersion(javaVersion)
+	targetCompatibility = JavaVersion.toVersion(javaVersion)
+}
+
+// Copies the finished jar to the root build/libs/, used by the buildAll task in stonecutter.gradle
+tasks.register('collectJar', Copy) {
+	group = 'build'
+	def modJar = tasks.named(unobfuscated ? 'jar' : 'remapJar')
+	from modJar.flatMap { it.archiveFile }
+	into rootProject.layout.buildDirectory.dir('libs')
+}
