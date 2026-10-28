@@ -3,7 +3,9 @@
 	"package": "de.musicbot.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-		"MicrophoneManagerMixin"
+		"MicrophoneManagerMixin",
+		"SoundManagerMixin",
+		"SpeakerManagerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -129,6 +129,7 @@ bot's client.
 | `play <URL\|search>` | `p`, `add` | Add a track or playlist to the queue (starts playing if nothing is playing) |
 | `playnext <…>` | `pn`, `next` | Add to the front of the queue |
 | `playnow <…>` | `pnow` | Play immediately (skips the current track) |
+| `playlist <URL>` | `plist`, `pll` | Add a whole playlist, also from a link to a video inside it (starts at that video) |
 | `skip [n]` | `s`, `fs` | Skip the current track (and n-1 more) |
 | `stop` | | Stop and clear the queue |
 | `pause` / `resume` | `unpause`, `continue` | Pause / resume |
@@ -193,6 +194,37 @@ When an owner or member invites the bot with `/voicechat invite BotName`, it acc
 also for password-protected groups. Invites from anyone else are ignored. The inviting player is identified by their
 UUID, not only by their name. You can also use `!join <group> [password]`, and `!leave` to leave the group.
 
+### Servers behind a proxy (Velocity, BungeeCord)
+
+Voice chat groups only exist on one backend server, so the bot loses its group when it is moved to another server.
+With `createGroupOnServerSwitch` set to `true`, the bot creates an open group named `serverSwitchGroupName` after every
+server switch. Players on the new server can join it from the group menu without a password, and players nearby hear
+the music as well. The first server the bot joins is not affected. The server must allow groups, and the bot needs
+the permission to create them.
+
+The bot can also run commands automatically, one per entry and with or without a leading slash:
+
+- `joinCommands`: after joining a server, e.g. `["server music"]` to move straight to a backend server.
+- `serverSwitchCommands`: after every server switch, e.g. `["spawn"]`.
+
+The commands are sent one after another with the delay from `replyDelayTicks`, so the server does not kick the bot
+for spamming. They run with the permissions of the bot account.
+
+## Playlists
+
+Everything yt-dlp can read as a playlist works: YouTube and YouTube Music playlists, albums and mixes, SoundCloud
+sets, and more. At most `maxPlaylistItems` tracks are loaded per playlist.
+
+```
+!play https://www.youtube.com/playlist?list=...           (playlist link: adds the whole playlist)
+!play https://www.youtube.com/watch?v=...&list=...        (video inside a playlist: only this video)
+!playlist https://www.youtube.com/watch?v=...&list=...    (the playlist, starting at this video)
+!shuffle                                                  (shuffle the queue afterwards)
+```
+
+With `loadFullPlaylists` on, `play` treats links to a video inside a playlist like `playlist`. YouTube mixes
+(`list=RD…`) are endless, so they are cut off at `maxPlaylistItems` as well.
+
 ## Library
 
 `!download <URL|search>` saves tracks (audio only) to `<game directory>/musicbot/library/`, with an index in
@@ -236,10 +268,16 @@ All options are stored in `config/musicbot.json`. If you edit the file by hand, 
 | `ytDlpExtraArgs` | `[]` | Extra arguments for every yt-dlp call, e.g. `["--cookies-from-browser", "firefox"]` |
 | `searchPrefix` | `ytsearch1:` | Default search (`scsearch1:` = SoundCloud) |
 | `maxPlaylistItems` / `maxQueueSize` | `100` / `500` | Limits |
+| `loadFullPlaylists` | `false` | `play` on a link to a video inside a playlist (`watch?v=…&list=…`) loads the whole playlist instead of only the video |
 | `volume` | `60` | Volume on start |
 | `virtualMicrophone` | `true` | Use a virtual microphone instead of a hardware device (restart required) |
+| `virtualSpeaker` | `false` | Never play voice chat through speakers/headphones (used automatically when there is no audio output) |
 | `suppressMicrophone` | `true` | Never transmit the bot's real microphone |
 | `autoJoinInvites` | `true` | Accept group invites from owners and members automatically |
+| `createGroupOnServerSwitch` | `false` | Create an open group after a proxy server switch (see [Voice chat groups](#voice-chat-groups)) |
+| `serverSwitchGroupName` | `Music Bot` | Name of that group (at most 24 characters) |
+| `joinCommands` | `[]` | Commands the bot runs after joining a server, e.g. `["server music"]` |
+| `serverSwitchCommands` | `[]` | Commands the bot runs after every proxy server switch |
 | `membersCanDownload` | `true` | Members may download into the library (otherwise owners only) |
 | `maxDownloadMinutes` | `120` | Maximum track length for downloads (0 = unlimited) |
 | `useLibraryCache` | `true` | Play links that are already saved from the library instead of streaming them |
@@ -281,10 +319,40 @@ Tips for writing patterns:
 - Private message patterns are checked first, so a private message is never mistaken for public chat.
 - The bot's log (`logs/latest.log`) shows commands it received, which helps when testing a pattern.
 
-## Running on a headless PC or over Remote Desktop
+## Running without audio devices (headless, HeadlessMC, Remote Desktop)
 
-- The virtual microphone is on by default, so the bot does not need any audio device. Messages like
-  "Failed to open OpenAL device" from Minecraft can be ignored – the bot does not need to hear anything.
+The bot does not need any audio hardware:
+
+- **Virtual microphone** (`virtualMicrophone`, on by default): replaces the microphone, the music is sent anyway.
+- **Virtual speaker** (`virtualSpeaker`): replaces speakers and headphones, voices of other players are discarded.
+  It is used **automatically** when no audio output can be opened. Without it, Simple Voice Chat would disable voice
+  chat completely and the bot could not send music. Set `virtualSpeaker` to `true` to use it always.
+
+Messages like "Failed to open OpenAL device" from Minecraft can be ignored.
+
+### Linux server with HeadlessMC
+
+[HeadlessMC](https://github.com/headlesshq/headlessmc) runs the Minecraft client without a screen, so the bot can run
+on a Linux server.
+
+1. Install the mods (Fabric API, Simple Voice Chat, Voice Chat Music Bot) into the instance's `mods` folder.
+2. Simple Voice Chat stays disabled until its setup assistant has been completed, which needs a screen. Mark it as
+   done in `config/voicechat/voicechat-client.properties` (create the file if needed):
+   ```properties
+   onboarding_finished=true
+   disabled=false
+   ```
+3. Add your account to `owners` in `config/musicbot.json`, so you can control the bot from your own client
+   right away. The file is created on the first start, or you can create it yourself:
+   ```json
+   { "owners": [ "YourName" ] }
+   ```
+4. For the automatic ffmpeg download, `tar` and `xz` must be installed (e.g. `apt install xz-utils`).
+   Alternatively install ffmpeg with your package manager.
+5. Start the game with HeadlessMC and join the server.
+
+### Remote Desktop (Windows)
+
 - Minecraft keeps running when you disconnect from Remote Desktop (disconnect, do not sign out).
 - If Minecraft has problems after disconnecting, move the session to the console instead of closing the RDP window
   (as administrator): `tscon %sessionname% /dest:console`. This ends the RDP connection while the session keeps running.
@@ -292,13 +360,14 @@ Tips for writing patterns:
 ## Troubleshooting
 
 - **Nobody hears the bot:** check that voice chat is enabled in the bot's Simple Voice Chat settings and that the
-  bot is near you or in your group. Players can change the bot's volume individually in their voice chat menu.
+  bot is near you or in your group. On a headless setup, see [HeadlessMC](#linux-server-with-headlessmc).
+  Players can change the bot's volume individually in their voice chat menu.
 - **YouTube stopped working:** run `!update` as owner. If you installed yt-dlp yourself, update it with `yt-dlp -U`
   or `pip install -U yt-dlp`.
 - **A stream stops after a long pause:** YouTube streams can expire after a few minutes. Use `seek` to continue
   from the old position.
-- **The game crashes with a mixin error after a Simple Voice Chat update:** the virtual microphone hooks into
-  Simple Voice Chat internals. Set `virtualMicrophone` to `false` and please
+- **The game crashes with a mixin error after a Simple Voice Chat update:** the virtual microphone and speaker hook
+  into Simple Voice Chat internals. Please
   [open an issue](https://github.com/ShortByte/simple-voice-chat-radio/issues).
 - **The bot ignores commands:** make sure the sender is an owner or member, and that the prefix is used in public chat.
   On servers with chat plugins, see [Servers with chat plugins](#servers-with-chat-plugins).

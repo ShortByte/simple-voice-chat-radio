@@ -2,19 +2,24 @@ package de.musicbot.config;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonParseException;
 import de.musicbot.MusicBotClient;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Writer;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * Configuration stored in {@code config/musicbot.json}.
@@ -22,6 +27,9 @@ import java.util.UUID;
 public class BotConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+
+    /** Valid voice chat group name, same rule as in Simple Voice Chat. */
+    public static final Pattern GROUP_NAME = Pattern.compile("^[^\\p{C}\\s][^\\p{C}]{0,23}$");
 
     /** Player names or UUIDs with full control: every command, also via chat/MSG, and managing members. */
     public List<String> owners = new ArrayList<>();
@@ -91,6 +99,12 @@ public class BotConfig {
     /** Maximum number of entries loaded from a playlist. */
     public int maxPlaylistItems = 100;
 
+    /**
+     * Load the whole playlist for links to a video inside one (watch?v=..&list=..), starting at that video.
+     * Otherwise only the video is played; the playlist command always loads the playlist.
+     */
+    public boolean loadFullPlaylists = false;
+
     /** Maximum queue length. */
     public int maxQueueSize = 500;
 
@@ -103,11 +117,33 @@ public class BotConfig {
      */
     public boolean virtualMicrophone = true;
 
+    /**
+     * Always use a virtual audio output instead of the speakers / headphones. Voices of other players are discarded.
+     * The virtual output is also used automatically when no output device can be opened (e.g. HeadlessMC, servers
+     * without sound system), because Simple Voice Chat would disable voice chat otherwise.
+     */
+    public boolean virtualSpeaker = false;
+
     /** Never transmit the real microphone of the bot account, only music. */
     public boolean suppressMicrophone = true;
 
     /** Automatically accept Simple Voice Chat group invites from owners and members. */
     public boolean autoJoinInvites = true;
+
+    /**
+     * Create an open voice chat group after a server switch behind a proxy (Velocity, BungeeCord), so everyone on the
+     * new server can join the bot's group. Not used when joining the first server.
+     */
+    public boolean createGroupOnServerSwitch = false;
+
+    /** Name of the group created by {@link #createGroupOnServerSwitch} (at most 24 characters). */
+    public String serverSwitchGroupName = "Music Bot";
+
+    /** Commands (leading slash optional) the bot runs after joining a server, e.g. "server music" behind a proxy. */
+    public List<String> joinCommands = new ArrayList<>();
+
+    /** Commands (leading slash optional) the bot runs after every server switch behind a proxy. */
+    public List<String> serverSwitchCommands = new ArrayList<>();
 
     /** Allow members (not only owners) to download songs into the library. */
     public boolean membersCanDownload = true;
@@ -153,10 +189,17 @@ public class BotConfig {
         Path file = path();
         BotConfig config = null;
         if (Files.exists(file)) {
-            try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                config = GSON.fromJson(reader, BotConfig.class);
-            } catch (Exception e) {
-                MusicBotClient.LOGGER.error("Failed to read {}, using defaults", file, e);
+            try {
+                config = read(file);
+            } catch (IOException e) {
+                // keep the user's file, it is overwritten with the defaults below
+                Path backup = file.resolveSibling("musicbot.json.broken");
+                MusicBotClient.LOGGER.error("Failed to read {}, using defaults. The old file is kept as {}", file, backup, e);
+                try {
+                    Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException ex) {
+                    MusicBotClient.LOGGER.error("Failed to back up {}", file, ex);
+                }
             }
         }
         if (config == null) {
@@ -165,6 +208,38 @@ public class BotConfig {
         config.sanitize();
         config.save();
         return config;
+    }
+
+    /**
+     * Reads the config file again.
+     *
+     * @throws IOException if the file cannot be read or parsed; it is left untouched then
+     */
+    public static BotConfig reload() throws IOException {
+        Path file = path();
+        BotConfig config = Files.exists(file) ? read(file) : new BotConfig();
+        config.sanitize();
+        config.save();
+        return config;
+    }
+
+    static BotConfig read(Path file) throws IOException {
+        byte[] bytes = Files.readAllBytes(file);
+        String json;
+        try {
+            json = StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(bytes)).toString();
+        } catch (CharacterCodingException e) {
+            // saved by an editor in the Windows ANSI code page, e.g. with "»" in a message pattern
+            MusicBotClient.LOGGER.warn("{} is not UTF-8, reading it as Windows-1252", file);
+            json = new String(bytes, Charset.isSupported("windows-1252") ? Charset.forName("windows-1252") : StandardCharsets.ISO_8859_1);
+        }
+        if (json.startsWith("﻿")) json = json.substring(1); // UTF-8 BOM, e.g. from Notepad
+        try {
+            BotConfig config = GSON.fromJson(json, BotConfig.class);
+            return config == null ? new BotConfig() : config;
+        } catch (JsonParseException e) {
+            throw new IOException(e.getMessage(), e);
+        }
     }
 
     public synchronized void save() {
@@ -185,6 +260,8 @@ public class BotConfig {
         if (systemMessagePatterns == null) systemMessagePatterns = new ArrayList<>();
         if (chatMessagePatterns == null) chatMessagePatterns = new ArrayList<>();
         if (ytDlpExtraArgs == null) ytDlpExtraArgs = new ArrayList<>();
+        if (joinCommands == null) joinCommands = new ArrayList<>();
+        if (serverSwitchCommands == null) serverSwitchCommands = new ArrayList<>();
         if (commandPrefix == null || commandPrefix.isBlank()) commandPrefix = "!";
         if (replyMode == null) replyMode = ReplyMode.WHISPER;
         if (whisperCommand == null || whisperCommand.isBlank()) whisperCommand = "msg {player} {message}";
@@ -192,6 +269,7 @@ public class BotConfig {
         if (ffmpegPath == null || ffmpegPath.isBlank()) ffmpegPath = "ffmpeg";
         if (denoPath == null || denoPath.isBlank()) denoPath = "deno";
         if (searchPrefix == null || searchPrefix.isBlank()) searchPrefix = "ytsearch1:";
+        if (serverSwitchGroupName == null || !GROUP_NAME.matcher(serverSwitchGroupName).matches()) serverSwitchGroupName = "Music Bot";
         replyDelayTicks = Math.max(0, replyDelayTicks);
         maxPlaylistItems = Math.max(1, maxPlaylistItems);
         maxQueueSize = Math.max(1, maxQueueSize);

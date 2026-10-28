@@ -63,8 +63,8 @@ dependencies {
 		transitive = false
 	}
 
-	// Fabric's test launcher resolves mod dependencies, so Simple Voice Chat must be present for tests
-	add(mod('testRuntimeOnly'), "maven.modrinth:simple-voice-chat:${project.voicechat_mod_version}") {
+	// Fabric's test launcher resolves mod dependencies, and the mixin tests use Simple Voice Chat classes
+	add(mod('testImplementation'), "maven.modrinth:simple-voice-chat:${project.voicechat_mod_version}") {
 		transitive = false
 	}
 	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"

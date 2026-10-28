@@ -8,6 +8,7 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -42,7 +43,11 @@ public final class ConfigScreen {
                 .setSavingRunnable(() -> {
                     MusicBotClient.config().save();
                     // re-reads the file, so the new values are validated and applied right away
-                    MusicBotClient.reloadConfig();
+                    try {
+                        MusicBotClient.reloadConfig();
+                    } catch (IOException e) {
+                        MusicBotClient.LOGGER.error("Failed to reload the config", e);
+                    }
                 });
         new ConfigScreen(builder.entryBuilder()).addCategories(builder);
         return builder.build();
@@ -89,6 +94,7 @@ public final class ConfigScreen {
         playback.addEntry(entries.startIntField(name("maxPlaylistItems"), config.maxPlaylistItems)
                 .setDefaultValue(defaults.maxPlaylistItems).setTooltip(tooltip("maxPlaylistItems")).setMin(1).setMax(10_000)
                 .setSaveConsumer(v -> config.maxPlaylistItems = v).build());
+        playback.addEntry(bool("loadFullPlaylists", config.loadFullPlaylists, defaults.loadFullPlaylists, v -> config.loadFullPlaylists = v));
         playback.addEntry(entries.startIntField(name("maxQueueSize"), config.maxQueueSize)
                 .setDefaultValue(defaults.maxQueueSize).setTooltip(tooltip("maxQueueSize")).setMin(1).setMax(100_000)
                 .setSaveConsumer(v -> config.maxQueueSize = v).build());
@@ -109,8 +115,16 @@ public final class ConfigScreen {
         voice.addEntry(entries.startBooleanToggle(name("virtualMicrophone"), config.virtualMicrophone)
                 .setDefaultValue(defaults.virtualMicrophone).setTooltip(tooltip("virtualMicrophone")).requireRestart()
                 .setSaveConsumer(v -> config.virtualMicrophone = v).build());
+        voice.addEntry(bool("virtualSpeaker", config.virtualSpeaker, defaults.virtualSpeaker, v -> config.virtualSpeaker = v));
         voice.addEntry(bool("suppressMicrophone", config.suppressMicrophone, defaults.suppressMicrophone, v -> config.suppressMicrophone = v));
         voice.addEntry(bool("autoJoinInvites", config.autoJoinInvites, defaults.autoJoinInvites, v -> config.autoJoinInvites = v));
+        voice.addEntry(bool("createGroupOnServerSwitch", config.createGroupOnServerSwitch, defaults.createGroupOnServerSwitch, v -> config.createGroupOnServerSwitch = v));
+        voice.addEntry(entries.startStrField(name("serverSwitchGroupName"), config.serverSwitchGroupName)
+                .setDefaultValue(defaults.serverSwitchGroupName).setTooltip(tooltip("serverSwitchGroupName"))
+                .setErrorSupplier(v -> BotConfig.GROUP_NAME.matcher(v).matches() ? Optional.empty() : error("groupName"))
+                .setSaveConsumer(v -> config.serverSwitchGroupName = v).build());
+        voice.addEntry(commandList("joinCommands", config.joinCommands, defaults.joinCommands, v -> config.joinCommands = v));
+        voice.addEntry(commandList("serverSwitchCommands", config.serverSwitchCommands, defaults.serverSwitchCommands, v -> config.serverSwitchCommands = v));
 
         ConfigCategory web = category(builder, "web");
         web.addEntry(entries.startBooleanToggle(name("webPanel"), config.webPanel)
@@ -159,6 +173,12 @@ public final class ConfigScreen {
     private AbstractConfigListEntry<List<String>> players(String key, List<String> value, List<String> def, Consumer<List<String>> save) {
         return entries.startStrList(name(key), value).setDefaultValue(def).setTooltip(tooltip(key))
                 .setCellErrorSupplier(v -> PLAYER.matcher(v.trim()).matches() ? Optional.empty() : error("player"))
+                .setSaveConsumer(v -> save.accept(new ArrayList<>(v.stream().map(String::trim).toList()))).build();
+    }
+
+    private AbstractConfigListEntry<List<String>> commandList(String key, List<String> value, List<String> def, Consumer<List<String>> save) {
+        return entries.startStrList(name(key), value).setDefaultValue(def).setTooltip(tooltip(key))
+                .setCellErrorSupplier(v -> v.isBlank() || v.trim().equals("/") ? error("notEmpty") : Optional.empty())
                 .setSaveConsumer(v -> save.accept(new ArrayList<>(v.stream().map(String::trim).toList()))).build();
     }
 

@@ -64,6 +64,15 @@ public class ChatSender {
         }
     }
 
+    /** Sends a command (leading slash optional), rate limited like replies. */
+    public void command(String command) {
+        String text = sanitize(command);
+        if (text.startsWith("/")) text = text.substring(1).trim();
+        if (text.isEmpty()) return;
+        String cmd = text;
+        enqueue(() -> connection().sendCommand(cmd));
+    }
+
     public void local(String text) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {

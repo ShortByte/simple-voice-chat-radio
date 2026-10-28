@@ -11,6 +11,7 @@ import de.musicbot.config.BotConfig;
 import de.musicbot.deps.DependencyManager;
 import de.musicbot.library.Library;
 import de.musicbot.voice.GroupInvite;
+import de.musicbot.voice.ServerSwitchGroup;
 import de.musicbot.web.WebPanel;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
@@ -28,6 +29,7 @@ import net.minecraft.network.chat.PlayerChatMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +49,8 @@ public class MusicBotClient implements ClientModInitializer {
     private static DependencyManager deps;
     private static List<Pattern> systemPatterns = List.of();
     private static List<Pattern> chatPatterns = List.of();
+    /** In the play phase of a server; stays set while a proxy moves the bot to another server. */
+    private static boolean inGame;
 
     @Override
     public void onInitializeClient() {
@@ -83,11 +87,23 @@ public class MusicBotClient implements ClientModInitializer {
         HeadBobber headBobber = new HeadBobber(config, player);
         ClientTickEvents.START_CLIENT_TICK.register(headBobber::tick);
         ClientTickEvents.END_CLIENT_TICK.register(client -> chat.tick());
-        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> client.execute(() -> {
-            if (!deps.isReady()) chat.local(deps.status());
-            if (webPanel.isRunning()) chat.local("Web panel: " + String.join(" | ", webPanel.urls()) + " (password: /musicbot web)");
-        }));
+        ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            // A proxy server switch goes through the configuration phase again: JOIN without DISCONNECT in between
+            if (inGame) {
+                ServerSwitchGroup.onServerSwitch();
+                client.execute(() -> config.serverSwitchCommands.forEach(chat::command));
+                return;
+            }
+            inGame = true;
+            client.execute(() -> {
+                config.joinCommands.forEach(chat::command);
+                if (!deps.isReady()) chat.local(deps.status());
+                if (webPanel.isRunning()) chat.local("Web panel: " + String.join(" | ", webPanel.urls()) + " (password: /musicbot web)");
+            });
+        });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            inGame = false;
+            ServerSwitchGroup.onDisconnect();
             player.stop();
             client.execute(chat::clear);
         });
@@ -120,8 +136,9 @@ public class MusicBotClient implements ClientModInitializer {
         return config;
     }
 
-    public static void reloadConfig() {
-        BotConfig fresh = BotConfig.load();
+    /** @throws IOException if the config file is invalid; the current settings are kept then */
+    public static void reloadConfig() throws IOException {
+        BotConfig fresh = BotConfig.reload();
         // Copy into the existing instance so all components keep their reference
         config.owners = fresh.owners;
         config.members = fresh.members;
@@ -143,12 +160,18 @@ public class MusicBotClient implements ClientModInitializer {
         config.ytDlpExtraArgs = fresh.ytDlpExtraArgs;
         config.searchPrefix = fresh.searchPrefix;
         config.maxPlaylistItems = fresh.maxPlaylistItems;
+        config.loadFullPlaylists = fresh.loadFullPlaylists;
         config.maxQueueSize = fresh.maxQueueSize;
         config.volume = fresh.volume;
         config.suppressMicrophone = fresh.suppressMicrophone;
         config.allowLocalFiles = fresh.allowLocalFiles;
         config.virtualMicrophone = fresh.virtualMicrophone;
+        config.virtualSpeaker = fresh.virtualSpeaker;
         config.autoJoinInvites = fresh.autoJoinInvites;
+        config.createGroupOnServerSwitch = fresh.createGroupOnServerSwitch;
+        config.serverSwitchGroupName = fresh.serverSwitchGroupName;
+        config.joinCommands = fresh.joinCommands;
+        config.serverSwitchCommands = fresh.serverSwitchCommands;
         config.membersCanDownload = fresh.membersCanDownload;
         config.maxDownloadMinutes = fresh.maxDownloadMinutes;
         config.useLibraryCache = fresh.useLibraryCache;

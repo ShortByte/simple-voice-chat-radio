@@ -3,6 +3,7 @@ package de.musicbot.voice;
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.ClientSoundEvent;
+import de.maxhenkel.voicechat.api.events.ClientVoicechatConnectionEvent;
 import de.maxhenkel.voicechat.api.events.EventRegistration;
 import de.maxhenkel.voicechat.api.events.MergeClientSoundEvent;
 import de.musicbot.MusicBotClient;
@@ -33,6 +34,9 @@ public class MusicBotVoicechatPlugin implements VoicechatPlugin {
     public void registerEvents(EventRegistration registration) {
         registration.registerEvent(MergeClientSoundEvent.class, this::onMerge);
         registration.registerEvent(ClientSoundEvent.class, this::onClientSound);
+        registration.registerEvent(ClientVoicechatConnectionEvent.class, event -> {
+            if (event.isConnected()) ServerSwitchGroup.onVoicechatConnected();
+        });
     }
 
     private void onMerge(MergeClientSoundEvent event) {

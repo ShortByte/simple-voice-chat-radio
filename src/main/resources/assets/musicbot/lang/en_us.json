@@ -48,6 +48,8 @@
 	"config.musicbot.searchPrefix.tooltip": "yt-dlp search used for text without a link: ytsearch1: = YouTube, scsearch1: = SoundCloud.",
 	"config.musicbot.maxPlaylistItems": "Max playlist items",
 	"config.musicbot.maxPlaylistItems.tooltip": "Maximum number of tracks loaded from one playlist.",
+	"config.musicbot.loadFullPlaylists": "Load full playlists",
+	"config.musicbot.loadFullPlaylists.tooltip": "Links to a video inside a playlist (watch?v=...&list=...) load the whole playlist, starting at that video. Off: only the video is played, the playlist command still loads the playlist.",
 	"config.musicbot.maxQueueSize": "Max queue size",
 	"config.musicbot.maxQueueSize.tooltip": "Maximum number of tracks in the queue.",
 	"config.musicbot.headBob": "Head bobbing",
@@ -64,10 +66,20 @@
 
 	"config.musicbot.virtualMicrophone": "Virtual microphone",
 	"config.musicbot.virtualMicrophone.tooltip": "Replace the hardware microphone with a virtual one, so no audio device is needed (Remote Desktop, headless PC).",
+	"config.musicbot.virtualSpeaker": "Virtual speaker",
+	"config.musicbot.virtualSpeaker.tooltip": "Never play voice chat through speakers or headphones, the bot does not need to hear anyone. Used automatically when no audio output exists (HeadlessMC, servers). Applies after rejoining.",
 	"config.musicbot.suppressMicrophone": "Mute real microphone",
 	"config.musicbot.suppressMicrophone.tooltip": "Never transmit the bot's real microphone, only the music.",
 	"config.musicbot.autoJoinInvites": "Accept group invites",
 	"config.musicbot.autoJoinInvites.tooltip": "Automatically join voice chat groups when an owner or member invites the bot.",
+	"config.musicbot.createGroupOnServerSwitch": "Create group on server switch",
+	"config.musicbot.createGroupOnServerSwitch.tooltip": "Create an open voice chat group whenever the bot is moved to another server behind a proxy (Velocity, BungeeCord), so players there can join it. Not used on the first server.",
+	"config.musicbot.serverSwitchGroupName": "Group name",
+	"config.musicbot.serverSwitchGroupName.tooltip": "Name of the open group created after a server switch.",
+	"config.musicbot.joinCommands": "Commands on join",
+	"config.musicbot.joinCommands.tooltip": "Commands the bot runs after joining a server, one per entry, leading slash optional. Sent with the reply delay, so the server does not kick the bot for spam.",
+	"config.musicbot.serverSwitchCommands": "Commands on server switch",
+	"config.musicbot.serverSwitchCommands.tooltip": "Commands the bot runs after every server switch behind a proxy (Velocity, BungeeCord), one per entry, leading slash optional.",
 
 	"config.musicbot.webPanel": "Enable web panel",
 	"config.musicbot.webPanel.tooltip": "Control the bot from a browser. The panel has owner rights, so it is off by default.",
@@ -99,6 +111,7 @@
 	"config.musicbot.error.searchPrefix": "Must end with a colon, e.g. ytsearch1:",
 	"config.musicbot.error.passwordLength": "Use at least 8 characters",
 	"config.musicbot.error.player": "Not a valid player name or UUID",
+	"config.musicbot.error.groupName": "1-24 characters, must not start with a space",
 	"config.musicbot.error.regex": "Invalid pattern: %s",
 	"config.musicbot.error.regexGroups": "Needs the groups (?<sender>...) and (?<message>...)"
 }

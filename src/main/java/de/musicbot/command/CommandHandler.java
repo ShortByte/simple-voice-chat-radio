@@ -12,6 +12,7 @@ import de.musicbot.library.LibraryDownloader;
 import de.musicbot.web.WebPanel;
 import net.minecraft.client.Minecraft;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -69,9 +70,10 @@ public class CommandHandler {
         MusicBotClient.LOGGER.info("Command from {}: {}", sender.name(), line);
 
         switch (cmd) {
-            case "play", "p", "add" -> play(sender, args, false, false);
-            case "playnext", "pn", "next" -> play(sender, args, true, false);
-            case "playnow", "pnow" -> play(sender, args, true, true);
+            case "play", "p", "add" -> play(sender, args, false, false, false);
+            case "playnext", "pn", "next" -> play(sender, args, true, false, false);
+            case "playnow", "pnow" -> play(sender, args, true, true, false);
+            case "playlist", "plist", "pll" -> play(sender, args, false, false, true);
             case "skip", "s", "fs" -> skip(sender, args);
             case "stop" -> {
                 player.stop();
@@ -124,22 +126,29 @@ public class CommandHandler {
         }
     }
 
-    private void play(CommandSender sender, String query, boolean front, boolean now) {
+    /** @param wholePlaylist load the whole playlist even for links to a single video inside it */
+    private void play(CommandSender sender, String query, boolean front, boolean now, boolean wholePlaylist) {
         if (query.isEmpty()) {
             // "play" without argument acts as resume
-            if (player.isPaused() && player.setPaused(false)) {
+            if (!wholePlaylist && player.isPaused() && player.setPaused(false)) {
                 reply(sender, "Resumed.");
             } else {
-                reply(sender, "Usage: " + config.commandPrefix + "play <URL or search term>");
+                reply(sender, "Usage: " + config.commandPrefix + (wholePlaylist ? "playlist <playlist URL>" : "play <URL or search term>"));
             }
             return;
         }
         if (!requireReady(sender)) return;
-        reply(sender, "Searching: " + query);
+        boolean loadPlaylist = wholePlaylist || config.loadFullPlaylists;
+        reply(sender, (loadPlaylist && TrackResolver.isVideoInPlaylist(query) ? "Loading playlist: " : "Searching: ") + query);
         resolveExecutor.execute(() -> {
             try {
-                List<Track> tracks = withLibraryCache(resolver.resolve(query, sender.name(), sender.isOwner()));
-                enqueueResolved(sender, tracks, front, now);
+                TrackResolver.Result result = resolver.resolve(query, sender.name(), sender.isOwner(), loadPlaylist);
+                List<Track> tracks = withLibraryCache(result.tracks());
+                enqueueResolved(sender, tracks, result.playlistTitle(), front, now);
+                if (!loadPlaylist && tracks.size() == 1 && TrackResolver.isVideoInPlaylist(query)) {
+                    Minecraft.getInstance().execute(() -> reply(sender, "This video is part of a playlist - "
+                            + config.commandPrefix + "playlist <link> adds the whole playlist."));
+                }
             } catch (TrackResolver.ResolveException e) {
                 Minecraft.getInstance().execute(() -> reply(sender, e.getMessage()));
             } catch (Exception e) {
@@ -167,7 +176,8 @@ public class CommandHandler {
         }).toList();
     }
 
-    private void enqueueResolved(CommandSender sender, List<Track> tracks, boolean front, boolean now) {
+    /** @param playlistTitle name of the playlist the tracks come from, or {@code null} */
+    private void enqueueResolved(CommandSender sender, List<Track> tracks, String playlistTitle, boolean front, boolean now) {
         Minecraft.getInstance().execute(() -> {
             boolean wasPlaying = player.currentTrack() != null;
             int added = player.enqueue(tracks, front);
@@ -184,7 +194,8 @@ public class CommandHandler {
                     reply(sender, "Playing: " + t.title());
                 }
             } else {
-                reply(sender, "Added " + added + " tracks to the queue" + (added < tracks.size() ? " (queue full)" : "") + ".");
+                reply(sender, "Added " + added + " tracks" + (playlistTitle == null ? "" : " from \"" + playlistTitle + "\"")
+                        + " to the queue" + (added < tracks.size() ? " (queue full)" : "") + ".");
             }
         });
     }
@@ -241,7 +252,7 @@ public class CommandHandler {
         reply(sender, "Searching to save: " + query);
         resolveExecutor.execute(() -> {
             try {
-                List<Track> tracks = resolver.resolve(query, sender.name(), false);
+                List<Track> tracks = resolver.resolve(query, sender.name(), false, config.loadFullPlaylists).tracks();
                 List<Track> missing = tracks.stream().filter(t -> library.indexOfSource(t.source()) < 0).toList();
                 Minecraft.getInstance().execute(() -> {
                     if (missing.isEmpty()) {
@@ -327,7 +338,7 @@ public class CommandHandler {
             reply(sender, "Nothing found in the library. " + config.commandPrefix + "library lists all tracks.");
             return;
         }
-        enqueueResolved(sender, tracks, false, false);
+        enqueueResolved(sender, tracks, null, false, false);
     }
 
     private void libraryRemove(CommandSender sender, String args) {
@@ -538,13 +549,19 @@ public class CommandHandler {
     }
 
     private void reload(CommandSender sender) {
-        MusicBotClient.reloadConfig();
-        reply(sender, "Config reloaded.");
+        try {
+            MusicBotClient.reloadConfig();
+            reply(sender, "Config reloaded.");
+        } catch (IOException e) {
+            MusicBotClient.LOGGER.error("Failed to reload the config", e);
+            reply(sender, "Cannot read config/musicbot.json, the current settings are kept: " + e.getMessage());
+        }
     }
 
     private void help(CommandSender sender) {
         String p = config.commandPrefix;
         reply(sender, p + "play <URL|search> | " + p + "playnext <..> | " + p + "playnow <..> (search: yt:/sc: prefix possible)");
+        reply(sender, p + "playlist <URL> - adds a whole playlist, also from a link to a video inside it");
         reply(sender, p + "skip [n] | " + p + "stop | " + p + "pause | " + p + "resume | " + p + "seek <mm:ss>");
         reply(sender, p + "queue [page] | " + p + "np | " + p + "remove <no.> | " + p + "move <from> <to> | " + p + "clear | " + p + "shuffle");
         reply(sender, p + "repeat [off|one|all] | " + p + "volume <0-200> | " + p + "bob [on|off|1-45] | " + p + "status");

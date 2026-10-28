@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.1.0
+
+- Playlists: new `playlist <URL>` command adds a whole playlist, also from a link to a video inside it
+  (`watch?v=…&list=…`), starting at that video. The queue message now shows the playlist name.
+- New option `loadFullPlaylists`: `play` loads the whole playlist for such links, too
+- Virtual speaker: runs without any audio output device (e.g. HeadlessMC on a Linux server). Used automatically when
+  no output can be opened, or always with `virtualSpeaker`
+- Servers behind a proxy (Velocity, BungeeCord): optionally creates an open voice chat group after a server switch
+  (`createGroupOnServerSwitch`, `serverSwitchGroupName`)
+- New options `joinCommands` and `serverSwitchCommands`: commands the bot runs after joining a server or after a
+  server switch
+- Fixed: a config file that is not valid UTF-8 (e.g. saved as ANSI by Windows Notepad) or has a syntax error was
+  replaced with the defaults, losing owners and message patterns. Such files are now read correctly, broken ones are
+  kept as `musicbot.json.broken`, and `reload` keeps the current settings
+
 ## 1.0.0
 
 First public release.
